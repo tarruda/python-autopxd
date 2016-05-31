@@ -8,8 +8,7 @@ import sys
 import click
 from pycparser import c_parser, c_ast
 
-BUILTIN_HEADERS_DIR = os.path.join(os.path.dirname(__file__),
-                                   'fake_libc_include')
+BUILTIN_HEADERS_DIR = os.path.join(os.path.dirname(__file__), 'include')
 # Types declared by pycparser fake headers that we should ignore
 IGNORE_DECLARATIONS = set((
     'size_t', '__builtin_va_list', '__gnuc_va_list', '__int8_t', '__uint8_t',
@@ -270,7 +269,7 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         self.decl_stack[-1].append(node)
 
     def lines(self):
-        rv = ['cdef extern from "{0}":'.format(self.hdrname)]
+        rv = ['cdef extern from "{0}":'.format(self.hdrname), '']
         for decl in self.decl_stack[0]:
             for line in decl.lines():
                 rv.append(self.indent + line)
@@ -311,7 +310,7 @@ def translate(code, hdrname):
 
 
 @click.command()
-@click.argument('infile', type=click.File('rb'))
-@click.argument('outfile', type=click.File('wb'))
+@click.argument('infile', type=click.File('rb'), default=sys.stdin)
+@click.argument('outfile', type=click.File('wb'), default=sys.stdout)
 def cli(infile, outfile):
     outfile.write(translate(infile.read(), infile.name))

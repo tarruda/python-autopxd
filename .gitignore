@@ -1,1 +1,2 @@
-fake_libc_include/
+autopxd/include/
+*.egg-info/
