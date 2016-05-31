@@ -217,6 +217,16 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         else:
             self.append(decls[0])
 
+    def visit_Decl(self, node):
+        decls = self.collect(node)
+        if not decls:
+            return
+        assert len(decls) == 1
+        if isinstance(decls[0], basestring):
+            self.append(IdentifierType(node.name, decls[0]))
+        else:
+            self.append(decls[0])
+
     def visit_FuncDecl(self, node):
         decls = self.collect(node)
         return_type = decls[-1].type_name
@@ -225,12 +235,23 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         if (len(args) == 1 and isinstance(args[0], IdentifierType) and
             args[0].type_name == 'void'):
             args = []
-        self.append(Function(return_type, fname, args))
+        if (self.child_of(c_ast.PtrDecl, -2) and not
+            self.child_of(c_ast.Typedef, -3)):
+            # declaring a variable or parameter
+            name = self.path_name('ft'.format(fname))
+            self.decl_stack[0].append(Type(Ptr(Function(return_type, name, args))))
+            self.append(name)
+        else:
+            self.append(Function(return_type, fname, args))
+
 
     def visit_PtrDecl(self, node):
         decls = self.collect(node)
         assert len(decls) == 1
-        self.append(Ptr(decls[0]))
+        if isinstance(decls[0], basestring):
+            self.append(decls[0])
+        else:
+            self.append(Ptr(decls[0]))
 
     def visit_ArrayDecl(self, node):
         decls = self.collect(node)
@@ -252,9 +273,11 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
 
     def path_name(self, tag):
         names = []
-        for node in self.visit_stack:
+        for node in self.visit_stack[:-2]:
             if hasattr(node, 'declname') and node.declname:
                 names.append(node.declname)
+            elif hasattr(node, 'name') and node.name:
+                names.append(node.name)
         return '_{0}_{1}'.format('_'.join(names), tag)
 
     def child_of(self, type, index=None):
