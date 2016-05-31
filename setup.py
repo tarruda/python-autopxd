@@ -33,7 +33,7 @@ def install_libc_headers_and(cmdclass):
     return Sub
 
 
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 REPO    = 'http://github.com/tarruda/autopxd'
 
 
