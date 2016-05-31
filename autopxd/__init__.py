@@ -321,7 +321,7 @@ def parse(code):
     ast = parser.parse(preprocessed)
     decls = []
     for decl in ast.ext:
-        if decl.name not in IGNORE_DECLARATIONS:
+        if hasattr(decl, 'name') and decl.name not in IGNORE_DECLARATIONS:
             decls.append(decl)
     ast.ext = decls
     return ast
