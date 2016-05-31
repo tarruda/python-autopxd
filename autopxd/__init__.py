@@ -140,17 +140,13 @@ class Block(PxdNode):
 
 
 class Enum(PxdNode):
-    def __init__(self, name, items, typedef):
+    def __init__(self, name, items):
         self.name = name
         self.items = items
-        self.typedef = typedef
 
     def lines(self):
         rv = []
-        if self.typedef:
-            assert self.name
-            rv.append('enum {0}:'.format(self.name))
-        elif self.name:
+        if self.name:
             rv.append('cdef enum {0}:'.format(self.name))
         else:
             rv.append('cdef enum:')
@@ -191,17 +187,19 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
             # inline struct/union, add a reference to whatever name it was
             # defined on the top level
             self.append(name)
-        return name
 
     def visit_Enum(self, node):
         items = []
         for item in node.values.enumerators:
             items.append(item.name)
-        typedef = self.child_of(c_ast.TypeDecl, -2)
         name = node.name
-        if not name and typedef:
-            name = self.visit_stack[-2].declname
-        self.append(Enum(name, items, typedef))
+        type_decl = self.child_of(c_ast.TypeDecl, -2)
+        if not name and type_decl:
+            name = self.path_name('e')
+        # add the enum definition to the top level
+        self.decl_stack[0].append(Enum(name, items))
+        if type_decl:
+            self.append(name)
 
     def visit_Struct(self, node):
         return self.visit_Block(node, 'struct')
@@ -224,6 +222,9 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         return_type = decls[-1].type_name
         fname = decls[-1].name
         args = decls[:-1]
+        if (len(args) == 1 and isinstance(args[0], IdentifierType) and
+            args[0].type_name == 'void'):
+            args = []
         self.append(Function(return_type, fname, args))
 
     def visit_PtrDecl(self, node):
