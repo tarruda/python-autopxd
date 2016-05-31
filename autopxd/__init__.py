@@ -315,7 +315,7 @@ def preprocess(code, extra_cpp_args=[]):
 
 
 def parse(code, extra_cpp_args=[]):
-    preprocessed = preprocess(code)
+    preprocessed = preprocess(code, extra_cpp_args=extra_cpp_args)
     parser = c_parser.CParser()
     ast = parser.parse(preprocessed)
     decls = []
@@ -327,8 +327,9 @@ def parse(code, extra_cpp_args=[]):
 
 
 def translate(code, hdrname, extra_cpp_args=[]):
+    extra_incdir = os.path.dirname(hdrname)
     p = AutoPxd(hdrname)
-    p.visit(parse(code))
+    p.visit(parse(code, extra_cpp_args=['-I', extra_incdir]))
     return str(p)
 
 
