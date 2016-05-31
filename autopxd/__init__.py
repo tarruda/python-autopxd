@@ -301,11 +301,10 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         return rv
 
 
-def preprocess(code):
+def preprocess(code, extra_cpp_args=[]):
     proc = subprocess.Popen([
         'cpp', '-nostdinc', '-D__attribute__(x)=', '-I', BUILTIN_HEADERS_DIR,
-        '-'
-    ], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    ] + extra_cpp_args + ['-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     result = []
     result.append(proc.communicate(input=code)[0])
     while proc.poll() is None:
@@ -315,7 +314,7 @@ def preprocess(code):
     return ''.join(result)
 
 
-def parse(code):
+def parse(code, extra_cpp_args=[]):
     preprocessed = preprocess(code)
     parser = c_parser.CParser()
     ast = parser.parse(preprocessed)
@@ -327,7 +326,7 @@ def parse(code):
     return ast
 
 
-def translate(code, hdrname):
+def translate(code, hdrname, extra_cpp_args=[]):
     p = AutoPxd(hdrname)
     p.visit(parse(code))
     return str(p)
