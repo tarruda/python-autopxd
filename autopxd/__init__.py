@@ -2,6 +2,7 @@
 
 import os
 import os.path
+import six
 import subprocess
 import sys
 
@@ -212,7 +213,7 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         if not decls:
             return
         assert len(decls) == 1
-        if isinstance(decls[0], basestring):
+        if isinstance(decls[0], six.string_types):
             self.append(IdentifierType(node.declname, decls[0]))
         else:
             self.append(decls[0])
@@ -222,7 +223,7 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         if not decls:
             return
         assert len(decls) == 1
-        if isinstance(decls[0], basestring):
+        if isinstance(decls[0], six.string_types):
             self.append(IdentifierType(node.name, decls[0]))
         else:
             self.append(decls[0])
@@ -248,7 +249,7 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
     def visit_PtrDecl(self, node):
         decls = self.collect(node)
         assert len(decls) == 1
-        if isinstance(decls[0], basestring):
+        if isinstance(decls[0], six.string_types):
             self.append(decls[0])
         else:
             self.append(Ptr(decls[0]))
@@ -306,12 +307,12 @@ def preprocess(code, extra_cpp_args=[]):
         'cpp', '-nostdinc', '-D__attribute__(x)=', '-I', BUILTIN_HEADERS_DIR,
     ] + extra_cpp_args + ['-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     result = []
-    result.append(proc.communicate(input=code)[0])
+    result.append(proc.communicate(input=code.encode('utf-8'))[0])
     while proc.poll() is None:
         result.append(proc.communicate()[0])
     if proc.returncode:
         raise Exception('Invoking C preprocessor failed')
-    return ''.join(result)
+    return b''.join(result).decode('utf-8')
 
 
 def parse(code, extra_cpp_args=[]):

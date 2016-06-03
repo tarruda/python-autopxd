@@ -54,6 +54,7 @@ setup(
         'sdist': install_libc_headers_and(sdist)
     },
     install_requires=[
+        'six',
         'Click',
         'pycparser',
     ],
