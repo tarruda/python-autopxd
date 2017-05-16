@@ -191,14 +191,16 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
 
     def visit_Enum(self, node):
         items = []
-        for item in node.values.enumerators:
-            items.append(item.name)
+        if node.values:
+            for item in node.values.enumerators:
+                items.append(item.name)
         name = node.name
         type_decl = self.child_of(c_ast.TypeDecl, -2)
         if not name and type_decl:
             name = self.path_name('e')
         # add the enum definition to the top level
-        self.decl_stack[0].append(Enum(name, items))
+        if len(items):
+            self.decl_stack[0].append(Enum(name, items))
         if type_decl:
             self.append(name)
 
@@ -263,7 +265,9 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         decls = self.collect(node)
         if len(decls) != 1:
             return
-        self.decl_stack[0].append(Type(decls[0]))
+        names = str(decls[0]).split()
+        if names[0] != names[1]:
+            self.decl_stack[0].append(Type(decls[0]))
 
     def collect(self, node):
         decls = []
