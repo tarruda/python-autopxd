@@ -307,10 +307,16 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
 
 
 def preprocess(code, extra_cpp_args=[]):
-    proc = subprocess.Popen([
-        'cpp', '-nostdinc', '-D__attribute__(x)=', '-I', BUILTIN_HEADERS_DIR,
-    ] + extra_cpp_args + ['-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     result = []
+    try:
+        proc = subprocess.check_output([
+            'cpp', '-nostdinc', '-D__attribute__(x)=', '-I', BUILTIN_HEADERS_DIR,
+        ] + extra_cpp_args + ['-'], stdin=subprocess.PIPE)
+    except subprocess.CalledProcessError:
+        args = [
+        'clang', '-E', '-nostdinc', '-D__attribute__(x)=', '-I' + '"' + BUILTIN_HEADERS_DIR + '"',
+        ]
+        proc = subprocess.Popen(args + extra_cpp_args + ['-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     result.append(proc.communicate(input=code.encode('utf-8'))[0])
     while proc.poll() is None:
         result.append(proc.communicate()[0])
