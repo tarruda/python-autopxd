@@ -319,22 +319,35 @@ def preprocess(code, extra_cpp_args=[]):
     return b''.join(result).decode('utf-8')
 
 
-def parse(code, extra_cpp_args=[]):
+def parse(code, extra_cpp_args=[], whitelist=None):
     preprocessed = preprocess(code, extra_cpp_args=extra_cpp_args)
     parser = c_parser.CParser()
     ast = parser.parse(preprocessed)
     decls = []
     for decl in ast.ext:
         if hasattr(decl, 'name') and decl.name not in IGNORE_DECLARATIONS:
-            decls.append(decl)
+            if not whitelist or decl.coord.file in whitelist:
+                decls.append(decl)
     ast.ext = decls
     return ast
 
 
 def translate(code, hdrname, extra_cpp_args=[]):
+
     extra_incdir = os.path.dirname(hdrname)
+    cpp_args = ['-I', extra_incdir]
+
+    # to generate pxd mappings for only certain files, populate the whitelist
+    # with the filenames (include full path):
+    # whitelist = ['/usr/include/baz.h', '/usr/include/tux.h']
+    whitelist = None
+
+    # if the input file is a file that we want in the whitelist, i.e. `whitelist = [hdrname]`,
+    # the following extra step is required:
+    # cpp_args += [hdrname]
+
     p = AutoPxd(hdrname)
-    p.visit(parse(code, extra_cpp_args=['-I', extra_incdir]))
+    p.visit(parse(code, extra_cpp_args=cpp_args, whitelist=whitelist))
     return str(p)
 
 
