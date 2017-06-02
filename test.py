@@ -18,7 +18,13 @@ def gen(test_file):
     c = c.strip()
     cython = cython.strip() + '\n'
     def test(self):
-        actual = autopxd.translate(c, os.path.basename(test_file))
+        whitelist = None
+        cpp_args = []
+        if test_file == 'test/whitelist.test':
+            test_path = os.path.dirname(test_file)
+            whitelist = ['test/tux_foo.h']
+            cpp_args = ['-I', test_path]
+        actual = autopxd.translate(c, os.path.basename(test_file), cpp_args, whitelist)
         self.assertEqual(cython, actual)
     return test
 
