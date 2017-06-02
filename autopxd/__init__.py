@@ -311,7 +311,7 @@ def preprocess(code, extra_cpp_args=[]):
         'cpp', '-nostdinc', '-D__attribute__(x)=', '-I', BUILTIN_HEADERS_DIR,
     ] + extra_cpp_args + ['-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     result = []
-    result.append(proc.communicate(input=code.encode('utf-8'))[0])
+    result.append(proc.communicate(input=code)[0])
     while proc.poll() is None:
         result.append(proc.communicate()[0])
     if proc.returncode:
