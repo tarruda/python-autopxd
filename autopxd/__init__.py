@@ -307,16 +307,15 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
 
 
 def preprocess(code, extra_cpp_args=[]):
-    proc = subprocess.Popen([
-        'cpp', '-nostdinc', '-D__attribute__(x)=', '-I', BUILTIN_HEADERS_DIR,
-    ] + extra_cpp_args + ['-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    result = []
-    result.append(proc.communicate(input=code.encode('utf-8'))[0])
-    while proc.poll() is None:
-        result.append(proc.communicate()[0])
+    proc = subprocess.Popen(
+        ['cpp', '-nostdinc', '-D__attribute__(x)=',
+            '-I', BUILTIN_HEADERS_DIR] +
+        extra_cpp_args + ['-'],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+    result = proc.communicate(input=code)[0]
     if proc.returncode:
         raise Exception('Invoking C preprocessor failed')
-    return b''.join(result).decode('utf-8')
+    return result
 
 
 def parse(code, extra_cpp_args=[], whitelist=None):
@@ -342,7 +341,7 @@ def translate(code, hdrname, extra_cpp_args=[], whitelist=None):
     the following extra step is required:
     extra_cpp_args += [hdrname]
     """
-    extra_incdir = os.path.dirname(hdrname)
+    extra_incdir = os.path.normpath(os.path.dirname(hdrname))    
     extra_cpp_args += ['-I', extra_incdir]
     p = AutoPxd(hdrname)
     p.visit(parse(code, extra_cpp_args=extra_cpp_args, whitelist=whitelist))
@@ -352,7 +351,7 @@ def translate(code, hdrname, extra_cpp_args=[], whitelist=None):
 WHITELIST = []
 
 @click.command()
-@click.argument('infile', type=click.File('rb'), default=sys.stdin)
-@click.argument('outfile', type=click.File('wb'), default=sys.stdout)
+@click.argument('infile', type=click.File(), default=sys.stdin)
+@click.argument('outfile', type=click.File('wt'), default=sys.stdout)
 def cli(infile, outfile):
     outfile.write(translate(infile.read(), infile.name))
