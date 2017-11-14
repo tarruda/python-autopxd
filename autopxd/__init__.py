@@ -191,14 +191,16 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
 
     def visit_Enum(self, node):
         items = []
-        for item in node.values.enumerators:
-            items.append(item.name)
+        if node.values:
+            for item in node.values.enumerators:
+                items.append(item.name)
         name = node.name
         type_decl = self.child_of(c_ast.TypeDecl, -2)
         if not name and type_decl:
             name = self.path_name('e')
         # add the enum definition to the top level
-        self.decl_stack[0].append(Enum(name, items))
+        if len(items):
+            self.decl_stack[0].append(Enum(name, items))
         if type_decl:
             self.append(name)
 
@@ -263,7 +265,9 @@ class AutoPxd(c_ast.NodeVisitor, PxdNode):
         decls = self.collect(node)
         if len(decls) != 1:
             return
-        self.decl_stack[0].append(Type(decls[0]))
+        names = str(decls[0]).split()
+        if names[0] != names[1]:
+            self.decl_stack[0].append(Type(decls[0]))
 
     def collect(self, node):
         decls = []
@@ -314,24 +318,37 @@ def preprocess(code, extra_cpp_args=[]):
     return result
 
 
-def parse(code, extra_cpp_args=[]):
+def parse(code, extra_cpp_args=[], whitelist=None):
     preprocessed = preprocess(code, extra_cpp_args=extra_cpp_args)
     parser = c_parser.CParser()
     ast = parser.parse(preprocessed)
     decls = []
     for decl in ast.ext:
         if hasattr(decl, 'name') and decl.name not in IGNORE_DECLARATIONS:
-            decls.append(decl)
+            if not whitelist or decl.coord.file in whitelist:
+                decls.append(decl)
     ast.ext = decls
     return ast
 
 
-def translate(code, hdrname, extra_cpp_args=[]):
-    extra_incdir = os.path.normpath(os.path.dirname(hdrname))
+def translate(code, hdrname, extra_cpp_args=[], whitelist=None):
+    """
+    to generate pxd mappings for only certain files, populate the whitelist parameter
+    with the filenames (including relative path):
+    whitelist = ['/usr/include/baz.h', 'include/tux.h']    
+
+    if the input file is a file that we want in the whitelist, i.e. `whitelist = [hdrname]`,
+    the following extra step is required:
+    extra_cpp_args += [hdrname]
+    """
+    extra_incdir = os.path.normpath(os.path.dirname(hdrname))    
+    extra_cpp_args += ['-I', extra_incdir]
     p = AutoPxd(hdrname)
-    p.visit(parse(code, extra_cpp_args=['-I', extra_incdir]))
+    p.visit(parse(code, extra_cpp_args=extra_cpp_args, whitelist=whitelist))
     return str(p)
 
+
+WHITELIST = []
 
 @click.command()
 @click.argument('infile', type=click.File(), default=sys.stdin)
