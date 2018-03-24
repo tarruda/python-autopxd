@@ -375,4 +375,6 @@ WHITELIST = []
 @click.argument('outfile', type=click.File('wb'), default=sys.stdout)
 def cli(infile, outfile):
     output = translate(infile.read(), infile.name)
-    outfile.write(ensure_binary(output))
+    if outfile is not sys.stdout:
+        output = ensure_binary(output)
+    outfile.write(output)
